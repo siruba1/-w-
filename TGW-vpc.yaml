@@ -1,0 +1,314 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Default VPC stack used in Transit Gateway labs
+Parameters:
+  ProjectName:
+    Type: String
+    Description: Project Name
+Mappings:
+  CidrMap:
+    ap-northeast-2:
+      VpcCidr: 10.1.0.0/16
+      PubSn1Cidr: 10.1.1.0/24
+      PubSn2Cidr: 10.1.2.0/24
+      PriSn3Cidr: 10.1.3.0/24
+      PriSn4Cidr: 10.1.4.0/24
+      ConSn5Cidr: 10.1.5.0/24
+      ConSn6Cidr: 10.1.6.0/24
+    sa-east-2:
+      VpcCidr: 10.3.0.0/16
+      PubSn1Cidr: 10.3.1.0/24
+      PubSn2Cidr: 10.3.2.0/24
+      PriSn3Cidr: 10.3.3.0/24
+      PriSn4Cidr: 10.3.4.0/24
+      ConSn5Cidr: 10.3.5.0/24
+      ConSn6Cidr: 10.3.6.0/24
+
+Resources:
+# VPC & Internet Gateway
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !FindInMap [CidrMap, !Ref "AWS::Region", VpcCidr]
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-vpc"
+
+  Igw:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-igw"
+
+  IgwAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref Igw
+      VpcId: !Ref Vpc
+
+# Public Subnet & Route Table
+  PubSn1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !FindInMap [CidrMap, !Ref "AWS::Region", PubSn1Cidr]
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-pub-sn1"
+
+  PubSn2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [2, !GetAZs '']
+      CidrBlock: !FindInMap [CidrMap, !Ref "AWS::Region", PubSn2Cidr]
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-pub-sn2"
+
+  PubRt12:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-pub-rt12"
+
+  PubRt12Sn1Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PubRt12
+      SubnetId: !Ref PubSn1
+
+  PubRt12Sn2Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PubRt12
+      SubnetId: !Ref PubSn2
+
+  PubRt12DefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: IgwAttachment
+    Properties:
+      RouteTableId: !Ref PubRt12
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref Igw
+
+# Private Subnet & Route Table
+  PriSn3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !FindInMap [CidrMap, !Ref "AWS::Region", PriSn3Cidr]
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-pri-sn3"
+
+  PriSn4:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [2, !GetAZs '']
+      CidrBlock: !FindInMap [CidrMap, !Ref "AWS::Region", PriSn4Cidr]
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-pri-sn4"
+
+  PriRt34:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-pri-rt34"
+
+  PriRt34Sn3Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PriRt34
+      SubnetId: !Ref PriSn3
+
+  PriRt34Sn4Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PriRt34
+      SubnetId: !Ref PriSn4
+
+  # PriRt34DefaultRoute:
+  #   Type: AWS::EC2::Route
+  #   DependsOn:
+  #   Properties:
+  #     RouteTableId: !Ref PriRt34
+  #     DestinationCidrBlock: 0.0.0.0/0
+  #     GatewayId:
+
+# Connection Subnet & Route Table
+  ConSn5:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !FindInMap [CidrMap, !Ref "AWS::Region", ConSn5Cidr]
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-con-sn5"
+
+  ConSn6:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [2, !GetAZs '']
+      CidrBlock: !FindInMap [CidrMap, !Ref "AWS::Region", ConSn6Cidr]
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-con-sn6"
+
+  ConRt56:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-con-rt56"
+
+  ConRt56Sn5Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref ConRt56
+      SubnetId: !Ref ConSn5
+
+  ConRt56Sn6Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref ConRt56
+      SubnetId: !Ref ConSn6
+
+# Web Application Load Balancer & Security Group
+  WebAlbSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref Vpc
+      GroupDescription: !Sub "${AWS::Region} Web ALB Security Group"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key : Name
+          Value : !Sub "${ProjectName}-web-alb-sg"
+
+  WebAlb:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      Name: !Sub "${ProjectName}-web-alb"
+      SecurityGroups:
+        - !Ref WebAlbSg
+      Subnets:
+        - !Ref PubSn1
+        - !Ref PubSn2
+
+  WebAlbTg:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${ProjectName}-web-alb-tg"
+      Port: 80
+      Protocol: HTTP
+      HealthCheckPath: '/'
+      HealthCheckIntervalSeconds: 10
+      HealthyThresholdCount: 3
+      UnhealthyThresholdCount: 3
+      VpcId: !Ref Vpc
+      Tags:
+        - Key : Name
+          Value : !Sub "${ProjectName}-web-alb-tg"
+
+  WebAlbListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref WebAlbTg
+      LoadBalancerArn: !Ref WebAlb
+      Port: 80
+      Protocol: HTTP
+
+# TGW
+  Tgw:
+    Type: AWS::EC2::TransitGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-tgw"
+
+  TgwAttachment:
+    Type: AWS::EC2::TransitGatewayAttachment
+    DependsOn: Vpc
+    Properties:
+      VpcId: !Ref Vpc
+      SubnetIds:
+      - !Ref ConSn5
+      - !Ref ConSn6
+      TransitGatewayId: !Ref Tgw
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-tgw-vpc-attachment"
+
+# OutPuts
+Outputs:
+  VpcId:
+    Description: The VPC ID
+    Value: !Ref Vpc
+    Export:
+      Name: VpcId
+  IgwId:
+    Description: The IGW ID
+    Value: !Ref Igw
+    Export:
+      Name: IgwId
+  PubSn1Id:
+    Description: The Public Subnet1 ID
+    Value: !Ref PubSn1
+    Export:
+      Name: PubSn1Id
+  PubSn2Id:
+    Description: The Public Subnet2 ID
+    Value: !Ref PubSn2
+    Export:
+      Name: PubSn2Id
+  PriSn3Id:
+    Description: The Private Subnet3 ID
+    Value: !Ref PriSn3
+    Export:
+      Name: PriSn3Id
+  PriSn4Id:
+    Description: The Private Subnet4 ID
+    Value: !Ref PriSn4
+    Export:
+      Name: PriSn4Id
+  PriRt34Id:
+    Description: The Private Subnet Route Table34 ID
+    Value: !Ref PriRt34
+    Export:
+      Name: PriRt34Id
+  WebAlbSgId:
+    Description: The Web ALB Security Group ID
+    Value: !Ref WebAlbSg
+    Export:
+      Name: WebAlbSgId
+  WebAlbTgId:
+    Description: The Web Application Load Balancer Target Group ID
+    Value: !Ref WebAlbTg
+    Export:
+      Name: WebAlbTgId
+...
