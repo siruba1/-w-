@@ -8,9 +8,9 @@ cat <<EOF > /etc/sysctl.conf
    net.ipv4.conf.all.send_redirects = 0
 EOF
 sysctl -p /etc/sysctl.conf
-printf "CGW IP는? "
+printf "CGW IP? "
 read cgwip
-printf "Tunnel 1 IP는? "
+printf "Tunnel1 IP? "
 read tunnel1
 cat <<EOF > /etc/ipsec.d/aws.conf
 conn Tunnel1
@@ -35,5 +35,5 @@ EOF
 cat <<EOF > /etc/ipsec.d/aws.secrets
 $cgwip $tunnel1 : PSK "password"
 EOF
-
-systemctl enable ipsec --now
+systemctl start ipsec
+systemctl enable ipsec
