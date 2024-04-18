@@ -1,0 +1,34 @@
+# 현재의 파일이 ruby임을 표시. ft=file type
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# 스크립트의 목적 표시
+  #==========#
+  # Ansible Server #
+  #==========#
+
+# Vagrant_API_Version이 2임을 의미. do |config| 로 설정의 시작 표시. end로 닫아야 함
+Vagrant.configure("2") do |config|
+
+  # config.vm.define에 아래에 vm.box를 구분하기 위해 do |cfg| 를 추가함. end로 닫아야 함
+    config.vm.define "ansible-server" do |cfg|
+      cfg.vm.box = "centos/7"
+  
+  # 가상머신 프로바이더 지정. 가상 머신의 이름 지정
+      cfg.vm.provider "virtualbox" do |vb|
+        vb.name = "Ansible-Server"
+      end
+  
+      cfg.vm.host_name = "ansible-server"
+      cfg.vm.network "private_network", ip: "192.168.8.10"
+      cfg.vm.network "forwarded_port", guest: 22, host: 60010, auto_correct: true, id: "ssh"
+      cfg.vm.synced_folder "../data", "/vagrant", disabled: true
+      cfg.vm.provision "shell", inline: "yum install epel-release -y"
+      cfg.vm.provision "shell", inline: "yum repolist"
+      cfg.vm.provision "shell", inline: "yum install ansible -y"
+      cfg.vm.provision "file", source: "ansible_env_ready.yml", destination: "ansible_env_ready.yml"
+      cfg.vm.provision "shell", inline: "ansible-playbook ansible_env_ready.yml"
+      cfg.vm.provision "file", source: "nginx_install.yml", destination: "nginx_install.yml"
+      cfg.vm.provision "shell", inline: "ansible-playbook nginx_install.yml"
+    end
+  end
