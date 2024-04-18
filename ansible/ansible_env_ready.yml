@@ -1,0 +1,25 @@
+---
+- name: Setup for the Ansible's Environment
+  hosts: localhost
+  gather_facts: no
+
+  tasks:
+    - name: Create vim env's directories $ files
+      shell: "{{ item }}"
+      with_items:
+        - "touch /home/vagrant/.vimrc"
+        - "touch /home/vagrant/.bashrc"
+
+    - name: Configure vimrc
+      lineinfile:
+        path: /home/vagrant/.vimrc
+        line: "set number"
+
+    - name: Configure Bashrc
+      lineinfile:
+        path: /home/vagrant/.bashrc
+        line: "{{ item }}"
+      with_items:
+        - "alias ans='ansible'" 
+        - "alias anp='ansible-playbook'"
+...
